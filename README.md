@@ -68,3 +68,10 @@ tools/crear-prueba*.py Documentos de prueba
 install.cmd            Registra la app en Windows (HKCU)
 uninstall.cmd          Quita el registro
 ```
+
+## Licencia
+
+MIT © 2026 Leandro Carlino — ver [LICENSE](LICENSE).
+
+Incluye librerías de terceros con sus propias licencias; sus avisos están en
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
