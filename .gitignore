@@ -1,0 +1,15 @@
+# Dependencias y artefactos de compilación
+node_modules/
+build/
+*.exe
+*.ico
+*.log
+
+# Documentos de prueba (los generan los scripts de tools/)
+tools/prueba*.docx
+tools/prueba*.doc
+
+# Sistema
+Thumbs.db
+desktop.ini
+.DS_Store

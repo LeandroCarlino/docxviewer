@@ -1,0 +1,14 @@
+﻿{
+    "dependencies":  {
+                         "docx-preview":  "^0.4.1",
+                         "word-extractor":  "^1.0.4"
+                     },
+    "devDependencies":  {
+                            "esbuild":  "^0.28.2",
+                            "postject":  "^1.0.0-alpha.6"
+                        },
+    "scripts":  {
+                    "build":  "node tools/build-sea.js",
+                    "dev":  "node app.js"
+                }
+}

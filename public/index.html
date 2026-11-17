@@ -1,0 +1,1566 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DocxViewer</title>
+<link rel="icon" href="/favicon.ico">
+<style>
+  :root {
+    --bg: #eef0f3;
+    --bar: #ffffff;
+    --border: #d8dde4;
+    --text: #1b1f24;
+    --muted: #6b7480;
+    --accent: #1f5fa8;
+    --accent-hover: #1a4f8c;
+    --paper: #ffffff;
+    --shadow: 0 1px 2px rgba(16,24,40,.08), 0 8px 24px rgba(16,24,40,.10);
+    --z: 1;
+  }
+  body.dark {
+    --bg: #14171c;
+    --bar: #1c2027;
+    --border: #2c333d;
+    --text: #e6e9ee;
+    --muted: #98a2b3;
+    --accent: #5b9bdd;
+    --accent-hover: #74ace6;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.45);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ---------- barra ---------- */
+  #bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bar);
+    border-bottom: 1px solid var(--border);
+    flex: 0 0 auto;
+  }
+  .brand {
+    font-weight: 650;
+    font-size: 13px;
+    letter-spacing: .2px;
+    color: var(--muted);
+    padding-right: 4px;
+    white-space: nowrap;
+  }
+  .btn {
+    font: inherit;
+    font-size: 13px;
+    color: var(--text);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 6px 11px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .12s, border-color .12s, color .12s;
+  }
+  .btn:hover { background: rgba(127,127,127,.12); }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary {
+    background: var(--accent);
+    border-color: transparent;
+    color: #fff;
+    font-weight: 600;
+  }
+  .btn.primary:hover { background: var(--accent-hover); }
+  .btn.icon { padding: 5px 9px; min-width: 30px; font-size: 14px; line-height: 1.1; }
+  .zoom { display: flex; align-items: center; gap: 2px; }
+  .zoom .val { min-width: 58px; font-variant-numeric: tabular-nums; }
+  .name {
+    font-size: 13px;
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 32vw;
+    padding-left: 4px;
+  }
+  .grow { flex: 1 1 auto; }
+  select.nup {
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--text);
+    background: var(--bar);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 6px 6px;
+    cursor: pointer;
+  }
+  select.nup:hover { background: rgba(127,127,127,.10); }
+  .chk {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12.5px;
+    color: var(--muted);
+    cursor: pointer;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .chk input { margin: 0; cursor: pointer; }
+
+  /* ---------- escenario ---------- */
+  #stage {
+    flex: 1 1 auto;
+    overflow: auto;
+    padding: 28px 24px 60px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+  }
+
+  /* ---------- docx (docx-preview) ---------- */
+  .docx-root {
+    zoom: var(--z);
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+  .docx-root[hidden] { display: none !important; }
+  .docx-root .docx-wrapper {
+    background: transparent !important;
+    padding: 0 !important;
+    display: flex;
+    flex-flow: column nowrap;
+    align-items: center;
+  }
+  .docx-root .docx-wrapper > section.docx {
+    background: #fff;
+    box-shadow: var(--shadow);
+    margin: 0 0 26px 0;
+  }
+  .docx-root .docx-wrapper > section.docx:last-child { margin-bottom: 0; }
+  .docx-loading {
+    color: var(--muted);
+    font-size: 14px;
+    padding: 40px 0;
+  }
+
+  /* ---------- hoja de texto (docx de respaldo y .doc) ---------- */
+  .doc {
+    color: #1a1a1a;
+    font-family: Calibri, Carlito, "Segoe UI", system-ui, sans-serif;
+    font-size: 15.5px;
+    line-height: 1.55;
+    overflow-wrap: break-word;
+    background: var(--paper);
+  }
+  .doc:empty { display: none; }
+  .doc h1, .doc h2, .doc h3, .doc h4, .doc h5, .doc h6 {
+    font-family: Calibri Light, Calibri, Carlito, "Segoe UI", sans-serif;
+    line-height: 1.25;
+    margin: 1.1em 0 .45em;
+    color: #14395e;
+  }
+  .doc h1 { font-size: 2em; }
+  .doc h2 { font-size: 1.55em; }
+  .doc h3 { font-size: 1.28em; }
+  .doc h4 { font-size: 1.1em; }
+  .doc h5, .doc h6 { font-size: 1em; }
+  .doc p { margin: 0 0 .75em; }
+  .doc > :first-child { margin-top: 0; }
+  .doc a { color: #0b57a4; }
+  .doc img { max-width: 100%; height: auto; }
+  .doc table {
+    border-collapse: collapse;
+    margin: 0 0 1em;
+    max-width: 100%;
+    font-size: .95em;
+  }
+  .doc th, .doc td {
+    border: 1px solid #cbd2da;
+    padding: .38em .55em;
+    vertical-align: top;
+    text-align: left;
+  }
+  .doc th { background: #f2f5f9; font-weight: 600; }
+  .doc ul, .doc ol { margin: 0 0 .75em; padding-left: 1.7em; }
+  .doc li { margin: .18em 0; }
+  .doc blockquote {
+    margin: 0 0 1em;
+    padding: .2em 0 .2em 1em;
+    border-left: 3px solid #cbd2da;
+    color: #4a5260;
+  }
+  .doc hr { border: 0; border-top: 1px solid #d7dce3; margin: 1.6em 0; }
+  .doc code, .doc pre {
+    font-family: Consolas, "Cascadia Mono", monospace;
+    font-size: .92em;
+    background: #f4f6f8;
+    border-radius: 4px;
+  }
+  .doc code { padding: .1em .35em; }
+  .doc pre { padding: .8em 1em; overflow: auto; }
+  .doc pre code { background: none; padding: 0; }
+
+  .page {
+    background: var(--paper);
+    width: 210mm;
+    min-height: 297mm;
+    padding: 25.4mm;
+    border-radius: 2px;
+    box-shadow: var(--shadow);
+    zoom: var(--z);
+  }
+  .page[hidden] { display: none !important; }
+
+  /* vista de texto de .doc antiguos */
+  .doc .legacy-text { white-space: pre-wrap; }
+  .doc .legacy-loading { color: #6b7480; font-style: italic; }
+  .doc table.legacy-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: .82em;
+    margin-bottom: 1em;
+  }
+  .doc table.legacy-table td {
+    border: 0;
+    border-bottom: 1px solid #e6e9ee;
+    padding: .2em .45em;
+    vertical-align: top;
+  }
+  .doc table.legacy-table td + td { border-left: 1px solid #eef1f5; }
+  .doc table.legacy-table td.num { text-align: right; white-space: nowrap; }
+  .doc table.legacy-table td.span { font-weight: 600; padding-top: .6em; }
+  .doc table.legacy-table tr:first-child td { border-top: 1px solid #e6e9ee; }
+
+  /* contenedor de medida invisible */
+  .measure-host {
+    position: fixed;
+    top: 0;
+    left: -30000px;
+    visibility: hidden;
+    pointer-events: none;
+    z-index: -1;
+  }
+  .measure-host .doc { display: flow-root; }
+
+  /* ---------- estado vacio / no soportado ---------- */
+  .empty {
+    text-align: center;
+    color: var(--muted);
+    max-width: 520px;
+    margin: 6vh auto 0;
+  }
+  .empty h1 { font-size: 20px; color: var(--text); font-weight: 600; margin: 0 0 8px; }
+  .empty p { margin: 0 0 7px; font-size: 14px; line-height: 1.6; }
+  .empty .hint { font-size: 12.5px; opacity: .8; margin-top: 14px; }
+  .empty .filename {
+    font-family: Consolas, monospace;
+    font-size: 12.5px;
+    color: var(--text);
+    background: rgba(127,127,127,.12);
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 6px;
+    margin-bottom: 14px;
+    word-break: break-all;
+  }
+  .empty .drop {
+    border: 2px dashed var(--border);
+    border-radius: 14px;
+    padding: 30px 24px;
+    margin-bottom: 18px;
+    transition: border-color .15s, background .15s;
+  }
+  .empty .glyph { font-size: 40px; line-height: 1; display: block; margin-bottom: 14px; }
+  .empty h2 { font-size: 15px; margin: 18px 0 8px; color: var(--text); }
+  .steps { text-align: left; max-width: 400px; margin: 0 auto; font-size: 13.5px; line-height: 1.7; }
+  .steps li { margin: 4px 0; }
+
+  body.dragover .empty .drop { border-color: var(--accent); background: rgba(91,155,221,.08); }
+  body.dragover #stage { outline: 3px dashed var(--accent); outline-offset: -10px; }
+
+  /* ---------- buscador ---------- */
+  #findBar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    background: var(--bar);
+    border-bottom: 1px solid var(--border);
+    flex: 0 0 auto;
+  }
+  #findBar[hidden] { display: none !important; }
+  #findInput {
+    font: inherit;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 6px 10px;
+    width: 280px;
+    outline: none;
+  }
+  #findInput:focus { border-color: var(--accent); }
+  #findCount {
+    font-size: 12.5px;
+    color: var(--muted);
+    min-width: 92px;
+    font-variant-numeric: tabular-nums;
+  }
+  mark.dv-hit {
+    background: #ffe58a;
+    color: inherit;
+    padding: 0;
+    border-radius: 2px;
+    scroll-margin: 140px;
+  }
+  mark.dv-hit.dv-active { background: #ff9f3d; box-shadow: 0 0 0 1px #d97706; }
+  body.dark mark.dv-hit { background: #7a5c00; color: #fff; }
+  body.dark mark.dv-hit.dv-active { background: #c47b00; }
+
+  /* ---------- aviso superior ---------- */
+  #note {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 14px;
+    background: #fff4d6;
+    color: #6b4d00;
+    border-bottom: 1px solid #f0dda6;
+    font-size: 12.5px;
+    line-height: 1.45;
+    flex: 0 0 auto;
+  }
+  #note[hidden] { display: none !important; }
+  #note.is-info { background: #e8f1fb; color: #1f4e79; border-bottom-color: #c9ddf2; }
+  #note.is-error { background: #fde7e5; color: #8a251e; border-bottom-color: #f3c4c0; }
+  body.dark #note { background: #3a3016; color: #f0d9a0; border-bottom-color: #4a3d1c; }
+  body.dark #note.is-info { background: #17293b; color: #a8cdf0; border-bottom-color: #23405c; }
+  body.dark #note.is-error { background: #3a1d1b; color: #f3b9b3; border-bottom-color: #4d2523; }
+  #note button {
+    background: none;
+    border: 0;
+    color: inherit;
+    font-size: 17px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 4px;
+    margin-left: auto;
+    opacity: .7;
+  }
+  #note button:hover { opacity: 1; }
+
+  /* ---------- avisos flotantes ---------- */
+  #toast {
+    position: fixed;
+    left: 50%;
+    bottom: 26px;
+    transform: translate(-50%, 20px);
+    background: #b3261e;
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: 9px;
+    font-size: 13px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.25);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s, transform .2s;
+    max-width: 80vw;
+    z-index: 50;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  #toast.info { background: #1f5fa8; }
+
+  /* ---------- impresion ---------- */
+  #printRoot { display: none; }
+
+  @media print {
+    html, body {
+      display: block !important;
+      height: auto !important;
+      overflow: visible !important;
+      background: #fff !important;
+    }
+    #bar, #stage, #toast, #file, #note, #findBar, #docxStyles { display: none !important; }
+    #printRoot { display: block !important; }
+
+    .print-page {
+      position: relative;
+      overflow: hidden;
+      break-after: page;
+      page-break-after: always;
+      margin: 0;
+    }
+    .print-page:last-child { break-after: auto; page-break-after: auto; }
+
+    .slot { position: relative; overflow: hidden; }
+    .slot > section.docx {
+      margin: 0 !important;
+      box-shadow: none !important;
+      transform-origin: top left;
+    }
+    .slot > .sheet-legacy {
+      background: #fff;
+      transform-origin: top left;
+    }
+    .print-foot {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 6px;
+      text-align: center;
+      font-family: Calibri, "Segoe UI", sans-serif;
+      font-size: 8pt;
+      color: #555;
+    }
+  }
+</style>
+</head>
+<body>
+  <header id="bar">
+    <span class="brand">DocxViewer</span>
+    <button id="openBtn" class="btn primary" type="button">Abrir documento…</button>
+    <span id="name" class="name"></span>
+    <span class="grow"></span>
+    <span class="zoom">
+      <button id="zOut" class="btn icon" type="button" title="Alejar (Ctrl −)">−</button>
+      <button id="zVal" class="btn val" type="button" title="Tamaño normal (Ctrl 0)">100%</button>
+      <button id="zIn" class="btn icon" type="button" title="Acercar (Ctrl +)">+</button>
+    </span>
+    <button id="themeBtn" class="btn icon" type="button" title="Cambiar tema">◐</button>
+    <select id="nup" class="nup" title="Páginas por hoja al imprimir">
+      <option value="1">1 pág. por hoja</option>
+      <option value="2">2 pág. por hoja</option>
+      <option value="4">4 pág. por hoja</option>
+    </select>
+    <label class="chk" title="Escribir «Página X de Y» al imprimir">
+      <input type="checkbox" id="numPages" checked> Nº pág.
+    </label>
+    <button id="printBtn" class="btn" type="button" title="Imprimir o guardar como PDF">Imprimir / PDF</button>
+  </header>
+
+  <div id="findBar" hidden>
+    <input id="findInput" type="search" placeholder="Buscar en el documento…" autocomplete="off" spellcheck="false">
+    <span id="findCount">0 de 0</span>
+    <button id="findPrev" class="btn icon" type="button" title="Anterior (Shift+Enter)">↑</button>
+    <button id="findNext" class="btn icon" type="button" title="Siguiente (Enter)">↓</button>
+    <button id="findClose" class="btn icon" type="button" title="Cerrar (Esc)">×</button>
+  </div>
+
+  <div id="note" hidden>
+    <span id="noteText"></span>
+    <button id="noteClose" type="button" title="Ocultar aviso">×</button>
+  </div>
+
+  <main id="stage">
+    <div id="docxRoot" class="docx-root" hidden></div>
+    <article id="page" class="page doc" hidden></article>
+
+    <section id="empty" class="empty">
+      <div class="drop">
+        <span class="glyph">📄</span>
+        <h1>Abre un documento de Word</h1>
+        <p>Pulsa <b>Abrir documento…</b> o arrastra aquí un archivo <b>.docx</b> o <b>.doc</b>.</p>
+      </div>
+      <p class="hint">Solo lectura · Todo se procesa en tu PC, nada se sube a internet</p>
+    </section>
+
+    <section id="unsupported" class="empty" hidden>
+      <div class="drop">
+        <span class="glyph">⚠️</span>
+        <h1>No se pudo leer este documento</h1>
+        <p class="filename" id="unsupportedName"></p>
+        <p id="unsupportedReason">El archivo no se pudo interpretar.</p>
+        <h2>Si es un .doc antiguo, conviértelo a .docx en 3 pasos</h2>
+        <ol class="steps">
+          <li>Ábrelo con <b>Word</b>, <b>LibreOffice</b> (gratis) o súbelo a <b>Google Docs</b>.</li>
+          <li>Usa <b>Archivo → Guardar como</b> (o <b>Descargar</b>) y elige <b>.docx</b>.</li>
+          <li>Vuelve aquí y abre ese .docx.</li>
+        </ol>
+        <p class="hint">El archivo original no se modifica.</p>
+      </div>
+      <button id="openBtn2" class="btn primary" type="button">Abrir otro documento…</button>
+    </section>
+  </main>
+
+  <input id="file" type="file" accept=".docx,.docm,.doc,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword" hidden>
+  <div id="toast"></div>
+  <div id="docxStyles" hidden></div>
+  <div id="printRoot" class="print-root"></div>
+  <style id="printPageSize"></style>
+
+<script src="/jszip.min.js"></script>
+<script src="/docx-preview.js"></script>
+<script src="/mammoth.browser.min.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ================== referencias ================== */
+  var docxRoot = document.getElementById('docxRoot');
+  var docxStyles = document.getElementById('docxStyles');
+  var page = document.getElementById('page');
+  var empty = document.getElementById('empty');
+  var unsupported = document.getElementById('unsupported');
+  var unsupportedName = document.getElementById('unsupportedName');
+  var unsupportedReason = document.getElementById('unsupportedReason');
+  var noteEl = document.getElementById('note');
+  var noteText = document.getElementById('noteText');
+  var nameEl = document.getElementById('name');
+  var fileInput = document.getElementById('file');
+  var toastEl = document.getElementById('toast');
+  var zVal = document.getElementById('zVal');
+  var nupSelect = document.getElementById('nup');
+  var numPagesBox = document.getElementById('numPages');
+  var printRoot = document.getElementById('printRoot');
+  var printPageSize = document.getElementById('printPageSize');
+  var stage = document.getElementById('stage');
+
+  var zoom = 1;
+  var toastTimer = null;
+  var printReady = false;
+  var renderMode = 'none';   /* 'docx' | 'legacy' | 'none' */
+
+  /* A4 con margenes de 25,4 mm (1 pulgada) a 96 ppp */
+  var PAGE_W = 210 / 25.4 * 96;   /* 793.7 px */
+  var PAGE_H = 297 / 25.4 * 96;   /* 1122.5 px */
+  var PRINT_W = 602;              /* ancho util para el paginador propio */
+  var PRINT_H = 930;              /* alto util */
+
+  /* ================== preferencias ================== */
+  try {
+    if (localStorage.getItem('dv-theme') === 'dark') document.body.classList.add('dark');
+    var z = parseFloat(localStorage.getItem('dv-zoom'));
+    if (z >= 0.5 && z <= 2.5) zoom = z;
+    var nupSaved = localStorage.getItem('dv-nup');
+    if (nupSaved === '1' || nupSaved === '2' || nupSaved === '4') nupSelect.value = nupSaved;
+    if (localStorage.getItem('dv-numpages') === '0') numPagesBox.checked = false;
+  } catch (_) {}
+  var nupUrl = new URLSearchParams(location.search).get('nup');
+  if (nupUrl === '1' || nupUrl === '2' || nupUrl === '4') nupSelect.value = nupUrl;
+
+  applyZoom();
+
+  function applyZoom() {
+    document.documentElement.style.setProperty('--z', String(zoom));
+    zVal.textContent = Math.round(zoom * 100) + '%';
+    try { localStorage.setItem('dv-zoom', String(zoom)); } catch (_) {}
+  }
+
+  function setZoom(v) {
+    zoom = Math.min(2.5, Math.max(0.5, Math.round(v * 10) / 10));
+    applyZoom();
+  }
+
+  function toast(msg, kind) {
+    toastEl.textContent = msg;
+    toastEl.className = 'show' + (kind === 'info' ? ' info' : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.className = ''; }, 5200);
+  }
+
+  function setNote(text, kind) {
+    if (!text) {
+      noteEl.hidden = true;
+      noteEl.className = '';
+      noteText.textContent = '';
+      return;
+    }
+    noteText.textContent = text;
+    noteEl.className = kind === 'error' ? 'is-error' : (kind === 'info' ? 'is-info' : '');
+    noteEl.hidden = false;
+  }
+
+  /* ================== estados ================== */
+  function showDocx() {
+    renderMode = 'docx';
+    docxRoot.hidden = false;
+    page.hidden = true;
+    empty.hidden = true;
+    unsupported.hidden = true;
+  }
+
+  function showLegacy() {
+    renderMode = 'legacy';
+    docxRoot.hidden = true;
+    page.hidden = false;
+    empty.hidden = true;
+    unsupported.hidden = true;
+  }
+
+  function showEmpty() {
+    renderMode = 'none';
+    docxRoot.hidden = true;
+    page.hidden = true;
+    empty.hidden = false;
+    unsupported.hidden = true;
+  }
+
+  function showUnsupported(name, reason) {
+    renderMode = 'none';
+    docxRoot.hidden = true;
+    page.hidden = true;
+    empty.hidden = true;
+    unsupported.hidden = false;
+    unsupportedName.textContent = name || '';
+    unsupportedReason.textContent = reason || 'El archivo no se pudo interpretar.';
+    if (name) setTitle(name);
+  }
+
+  function setTitle(name) {
+    nameEl.textContent = name || 'Documento';
+    nameEl.title = nameEl.textContent;
+    document.title = nameEl.textContent + ' — DocxViewer';
+  }
+
+  function resetPrint() {
+    printReady = false;
+    printRoot.innerHTML = '';
+    printPageSize.textContent = '';
+  }
+
+  /* ================== deteccion de formato ================== */
+  function detectKind(buf) {
+    var b = new Uint8Array(buf.slice(0, 8));
+    if (b[0] === 0x50 && b[1] === 0x4b) return 'docx';
+    if (b[0] === 0xd0 && b[1] === 0xcf && b[2] === 0x11 && b[3] === 0xe0) return 'legacy-doc';
+    return 'unknown';
+  }
+
+  /* ================== .docx con docx-preview ================== */
+  var DOCX_OPTIONS = {
+    className: 'docx',
+    inWrapper: true,
+    breakPages: true,
+    ignoreWidth: false,
+    ignoreHeight: false,
+    ignoreFonts: false,
+    ignoreLastRenderedPageBreak: false,
+    renderHeaders: true,
+    renderFooters: true,
+    renderFootnotes: true,
+    renderEndnotes: true,
+    renderChanges: true,
+    useBase64URL: true,
+    experimental: true,
+    debug: false
+  };
+
+  function docxSections() {
+    return Array.prototype.slice.call(docxRoot.querySelectorAll('section.docx'));
+  }
+
+  /* si el documento no trae saltos y su contenido desborda la hoja,
+     docx-preview lo deja en una hoja gigante: en ese caso se usa el paginador propio */
+  function sectionsOverflow() {
+    return docxSections().some(function (s) {
+      var pageH = toPx(s.style.minHeight) || toPx(s.style.height);
+      if (!pageH) return false;
+      return s.offsetHeight > pageH * 1.12;
+    });
+  }
+
+  function renderDocx(buf, name) {
+    setTitle(name);
+    resetPrint();
+    hideFind();
+    docxRoot.innerHTML = '<div class="docx-loading">Cargando documento…</div>';
+    page.innerHTML = '';
+
+    if (!window.docx || typeof window.docx.renderAsync !== 'function') {
+      renderWithMammoth(buf, name, 'No se pudo cargar el motor de documentos.');
+      return;
+    }
+
+    window.docx.renderAsync(buf, docxRoot, docxStyles, DOCX_OPTIONS)
+      .then(function () {
+        if (!docxSections().length) throw new Error('sin paginas');
+
+        /* hay que medir con el contenedor visible */
+        docxRoot.hidden = false;
+
+        if (sectionsOverflow()) {
+          renderWithMammoth(buf, name,
+            'Vista simplificada: el documento no guarda los saltos de página, así que se repagina aquí.');
+          return;
+        }
+        showDocx();
+        stage.scrollTop = 0;
+        setNote('', '');
+        resetPrint();
+      })
+      .catch(function (err) {
+        console.warn('docx-preview:', err);
+        renderWithMammoth(buf, name, 'Vista simplificada: no se pudo reproducir el diseño exacto del documento.');
+      });
+  }
+
+  /* ================== respaldo: mammoth + paginador propio ================== */
+  function renderWithMammoth(buf, name, reason) {
+    if (!window.mammoth) {
+      showUnsupported(name, 'No se pudo cargar el motor de documentos.');
+      return;
+    }
+
+    setTitle(name);
+    hideFind();
+    docxRoot.hidden = true;
+    docxRoot.innerHTML = '';
+
+    var options = {
+      includeDefaultStyleMap: true,
+      styleMap: [
+        "p[style-name='Title'] => h1.doc-title:fresh",
+        "p[style-name='Subtitle'] => p.doc-subtitle:fresh",
+        "p[style-name='Quote'] => blockquote:fresh",
+        "p[style-name='Intense Quote'] => blockquote:fresh"
+      ],
+      convertImage: mammoth.images.imgElement(function (image) {
+        return image.read('base64').then(function (b64) {
+          return { src: 'data:' + image.contentType + ';base64,' + b64 };
+        });
+      }),
+      ignoreEmptyParagraphs: false
+    };
+
+    mammoth.convertToHtml({ arrayBuffer: buf }, options).then(function (result) {
+      page.innerHTML = result.value || '<p><em>(Documento sin contenido de texto)</em></p>';
+      page.style.display = '';
+      showLegacy();
+      stage.scrollTop = 0;
+      resetPrint();
+      setNote(reason || '', 'warn');
+    }).catch(function (err) {
+      console.error(err);
+      showUnsupported(name, 'El archivo no se pudo interpretar. ¿Seguro que es un documento de Word válido?');
+    });
+  }
+
+  /* ================== .doc antiguos ================== */
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function legacyTextHtml(raw) {
+    var lines = String(raw).replace(/\r\n?/g, '\n').replace(/\f/g, '\n').split('\n');
+    var nonEmpty = lines.filter(function (l) { return l.trim(); });
+    var tabbed = nonEmpty.filter(function (l) { return l.indexOf('\t') >= 0; });
+    var useTable = nonEmpty.length >= 4 && tabbed.length / nonEmpty.length >= 0.5;
+
+    if (!useTable) {
+      var out = [];
+      var blanks = 0;
+      lines.forEach(function (l) {
+        if (!l.trim()) {
+          blanks++;
+          if (blanks > 1) return;
+          out.push('');
+        } else {
+          blanks = 0;
+          out.push(l.replace(/\s+$/, ''));
+        }
+      });
+      return '<div class="legacy-text">' + escapeHtml(out.join('\n').trim()) + '</div>';
+    }
+
+    var rows = nonEmpty.map(function (l) {
+      var cells = l.split('\t');
+      while (cells.length && cells[cells.length - 1] === '') cells.pop();
+      return cells;
+    });
+
+    var maxCols = 0;
+    var counts = {};
+    rows.forEach(function (r) {
+      maxCols = Math.max(maxCols, r.length);
+      if (r.length > 1) counts[r.length] = (counts[r.length] || 0) + 1;
+    });
+
+    var mode = 0;
+    var best = 0;
+    Object.keys(counts).forEach(function (k) {
+      if (counts[k] > best) { best = counts[k]; mode = parseInt(k, 10); }
+    });
+
+    var cols = Math.max(2, Math.min(8, mode || maxCols));
+
+    var filled = new Array(cols).fill(0);
+    var numeric = new Array(cols).fill(0);
+    rows.forEach(function (r) {
+      for (var i = 0; i < cols; i++) {
+        var v = (r[i] || '').trim();
+        if (!v) continue;
+        filled[i]++;
+        if (/^[-+$]?[\d.,\s]+$/.test(v)) numeric[i]++;
+      }
+    });
+    var rightAlign = filled.map(function (n, i) { return n > 0 && numeric[i] / n >= 0.7; });
+
+    function normalize(cells) {
+      if (cells.length > cols) {
+        var head = cells.slice(0, cols - 1);
+        head.push(cells.slice(cols - 1).join(' '));
+        cells = head;
+      }
+      while (cells.length < cols) cells.push('');
+      return cells;
+    }
+
+    var html = '<table class="legacy-table"><tbody>';
+    rows.forEach(function (r) {
+      var cells = normalize(r);
+      var filledCells = cells.filter(function (c) { return c.trim(); }).length;
+
+      if (filledCells <= 1) {
+        html += '<tr><td colspan="' + cols + '" class="span">' +
+          escapeHtml(cells.join(' ').trim()) + '</td></tr>';
+        return;
+      }
+
+      html += '<tr>';
+      for (var i = 0; i < cols; i++) {
+        html += '<td' + (rightAlign[i] ? ' class="num"' : '') + '>' +
+          escapeHtml(cells[i].trim()) + '</td>';
+      }
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    return html;
+  }
+
+  function openLegacy(buf, name) {
+    resetPrint();
+    hideFind();
+    docxRoot.hidden = true;
+    docxRoot.innerHTML = '';
+    page.innerHTML = '<p class="legacy-loading">Leyendo documento…</p>';
+    showLegacy();
+    setTitle(name);
+    setNote('Extrayendo el texto de un archivo .doc antiguo…', 'info');
+
+    fetch('/api/extract', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: buf
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data || typeof data.text !== 'string') {
+          throw new Error((data && data.error) || 'sin texto');
+        }
+        if (!data.text.replace(/\s+/g, '')) {
+          showUnsupported(name,
+            'El documento no tiene texto que se pueda extraer (quizá solo contiene imágenes o está dañado).');
+          setNote('', '');
+          return;
+        }
+        page.innerHTML = legacyTextHtml(data.text);
+        showLegacy();
+        resetPrint();
+        setNote('Vista de texto: es un archivo .doc antiguo, así que no se reproduce el diseño original ' +
+          '(fuentes, colores, imágenes). Para verlo igual que en Word, guárdalo como .docx.', 'warn');
+      })
+      .catch(function (err) {
+        console.error(err);
+        showUnsupported(name,
+          'No se pudo leer el contenido de este .doc. Puede estar dañado, protegido con contraseña o usar un formato poco común.');
+        setNote('', '');
+      });
+  }
+
+  function openBuffer(buf, name) {
+    var kind = detectKind(buf);
+    if (kind === 'legacy-doc') {
+      openLegacy(buf, name);
+      return;
+    }
+    if (kind !== 'docx') {
+      toast('Ese archivo no parece un documento de Word válido.');
+      return;
+    }
+    renderDocx(buf, name);
+  }
+
+  function openFileObject(file) {
+    var reader = new FileReader();
+    reader.onload = function () { openBuffer(reader.result, file.name); };
+    reader.onerror = function () { toast('No se pudo leer el archivo.'); };
+    reader.readAsArrayBuffer(file);
+  }
+
+  /* ================== documento desde el servidor ================== */
+  function loadFromServer() {
+    fetch('/api/info', { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (info) {
+        if (!info || !info.name) return;
+        setTitle(info.name);
+
+        if (info.kind === 'unknown') {
+          showUnsupported(info.name, 'El archivo no parece un documento de Word.');
+          return;
+        }
+
+        return fetch('/document.docx', { cache: 'no-store' })
+          .then(function (r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.arrayBuffer();
+          })
+          .then(function (buf) { openBuffer(buf, info.name); });
+      })
+      .catch(function (err) {
+        console.error(err);
+        toast('No se pudo cargar el documento.');
+      });
+  }
+
+  /* ================== buscador ================== */
+  var findBar = document.getElementById('findBar');
+  var findInput = document.getElementById('findInput');
+  var findCount = document.getElementById('findCount');
+  var findHits = [];
+  var findIndex = -1;
+  var findTimer = null;
+
+  function contentRoot() {
+    return renderMode === 'docx' ? docxRoot : page;
+  }
+
+  function clearFindMarks() {
+    var root = contentRoot();
+    var marks = root.querySelectorAll('mark.dv-hit');
+    for (var i = marks.length - 1; i >= 0; i--) {
+      var m = marks[i];
+      var parent = m.parentNode;
+      if (!parent) continue;
+      while (m.firstChild) parent.insertBefore(m.firstChild, m);
+      parent.removeChild(m);
+      parent.normalize();
+    }
+    findHits = [];
+    findIndex = -1;
+  }
+
+  function updateFindLabel() {
+    if (!findHits.length) {
+      findCount.textContent = findInput.value.trim() ? 'Sin resultados' : '0 de 0';
+      return;
+    }
+    findCount.textContent = (findIndex + 1) + ' de ' + findHits.length;
+  }
+
+  function goToHit(i) {
+    if (!findHits.length) return;
+    findHits.forEach(function (h) { h.classList.remove('dv-active'); });
+    findIndex = (i + findHits.length) % findHits.length;
+    var hit = findHits[findIndex];
+    hit.classList.add('dv-active');
+    hit.scrollIntoView({ block: 'center' });
+    updateFindLabel();
+  }
+
+  function runFind(query) {
+    clearFindMarks();
+    var q = query.trim();
+    if (!q) { updateFindLabel(); return; }
+
+    var needle = q.toLocaleLowerCase('es');
+    var root = contentRoot();
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (node) {
+        if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+        var p = node.parentNode;
+        if (p && /^(STYLE|SCRIPT|MARK)$/.test(p.nodeName)) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+
+    var nodes = [];
+    var n;
+    while ((n = walker.nextNode())) nodes.push(n);
+
+    nodes.forEach(function (node) {
+      var text = node.nodeValue;
+      var lower = text.toLocaleLowerCase('es');
+      var ranges = [];
+      var from = 0;
+      for (;;) {
+        var at = lower.indexOf(needle, from);
+        if (at < 0) break;
+        ranges.push([at, at + needle.length]);
+        from = at + needle.length;
+      }
+      for (var i = ranges.length - 1; i >= 0; i--) {
+        var range = document.createRange();
+        range.setStart(node, ranges[i][0]);
+        range.setEnd(node, ranges[i][1]);
+        var mark = document.createElement('mark');
+        mark.className = 'dv-hit';
+        try { range.surroundContents(mark); } catch (e) { /* ignorar */ }
+      }
+    });
+
+    findHits = Array.prototype.slice.call(contentRoot().querySelectorAll('mark.dv-hit'));
+    findIndex = -1;
+    if (findHits.length) goToHit(0);
+    else updateFindLabel();
+  }
+
+  function openFind() {
+    findBar.hidden = false;
+    findInput.focus();
+    findInput.select();
+  }
+
+  function hideFind() {
+    if (!findBar.hidden) {
+      findBar.hidden = true;
+      clearFindMarks();
+      findInput.value = '';
+      updateFindLabel();
+    }
+  }
+
+  findInput.addEventListener('input', function () {
+    clearTimeout(findTimer);
+    var value = findInput.value;
+    findTimer = setTimeout(function () { runFind(value); }, 160);
+  });
+  findInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (!findHits.length) runFind(findInput.value);
+      else goToHit(findIndex + (e.shiftKey ? -1 : 1));
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      hideFind();
+    }
+  });
+  document.getElementById('findNext').addEventListener('click', function () { goToHit(findIndex + 1); });
+  document.getElementById('findPrev').addEventListener('click', function () { goToHit(findIndex - 1); });
+  document.getElementById('findClose').addEventListener('click', hideFind);
+
+  /* ================== paginacion propia (texto y respaldo) ================== */
+  function makeMeasureHost() {
+    var host = document.createElement('div');
+    host.className = 'measure-host';
+    document.body.appendChild(host);
+    return host;
+  }
+
+  function newPageBody(host) {
+    var b = document.createElement('div');
+    b.className = 'doc page-body';
+    b.style.width = PRINT_W + 'px';
+    host.appendChild(b);
+    return b;
+  }
+
+  function heightOf(el) { return el.getBoundingClientRect().height; }
+
+  function hasVisualContent(el) {
+    if (el.querySelector('img,table,hr')) return true;
+    return !!el.textContent.replace(/\s+/g, '');
+  }
+
+  function locateChar(nodes, k) {
+    var acc = 0;
+    for (var i = 0; i < nodes.length; i++) {
+      var len = nodes[i].nodeValue.length;
+      if (k <= acc + len) return { node: nodes[i], offset: k - acc };
+      acc += len;
+    }
+    var last = nodes[nodes.length - 1];
+    return { node: last, offset: last.nodeValue.length };
+  }
+
+  function splitByChildren(el, maxH, host) {
+    var probe = document.createElement('div');
+    probe.className = 'doc';
+    probe.style.width = PRINT_W + 'px';
+    probe.style.display = 'flow-root';
+    host.appendChild(probe);
+
+    var pre = el.cloneNode(false);
+    probe.appendChild(pre);
+
+    var kids = Array.prototype.slice.call(el.childNodes);
+    var cut = -1;
+
+    for (var i = 0; i < kids.length; i++) {
+      pre.appendChild(kids[i].cloneNode(true));
+      if (heightOf(probe) > maxH) {
+        pre.removeChild(pre.lastChild);
+        if (i === 0) { host.removeChild(probe); return null; }
+        cut = i;
+        break;
+      }
+    }
+
+    if (cut < 0) { host.removeChild(probe); return null; }
+
+    var suf = el.cloneNode(false);
+    for (var j = cut; j < kids.length; j++) suf.appendChild(kids[j].cloneNode(true));
+
+    host.removeChild(probe);
+    if (!pre.childNodes.length || !suf.childNodes.length) return null;
+    return [pre, suf];
+  }
+
+  function splitTable(tbl, maxH, host) {
+    var allRows = Array.prototype.slice.call(tbl.rows);
+    if (allRows.length < 3) return null;
+
+    var headRows = tbl.tHead ? Array.prototype.slice.call(tbl.tHead.rows) : [];
+    var bodyRows = allRows.filter(function (r) { return headRows.indexOf(r) < 0; });
+    if (bodyRows.length < 2) return null;
+
+    var probe = document.createElement('div');
+    probe.className = 'doc';
+    probe.style.width = PRINT_W + 'px';
+    probe.style.display = 'flow-root';
+    host.appendChild(probe);
+
+    var colgroups = Array.prototype.slice.call(tbl.querySelectorAll('colgroup'));
+
+    function makeTable(rows) {
+      var t = tbl.cloneNode(false);
+      colgroups.forEach(function (c) { t.appendChild(c.cloneNode(true)); });
+      if (tbl.tHead) t.appendChild(tbl.tHead.cloneNode(false));
+      if (tbl.tBodies && tbl.tBodies[0]) t.appendChild(tbl.tBodies[0].cloneNode(false));
+      var container = (t.tHead && rows.length && headRows.indexOf(rows[0]) >= 0)
+        ? t.tHead
+        : (t.tBodies && t.tBodies[0] ? t.tBodies[0] : t);
+      rows.forEach(function (r) { container.appendChild(r.cloneNode(true)); });
+      return t;
+    }
+
+    var count = 0;
+    for (var i = 1; i <= bodyRows.length; i++) {
+      probe.innerHTML = '';
+      probe.appendChild(makeTable(headRows.concat(bodyRows.slice(0, i))));
+      if (heightOf(probe) > maxH) break;
+      count = i;
+    }
+
+    host.removeChild(probe);
+    if (count === 0 || count >= bodyRows.length) return null;
+
+    return [
+      makeTable(headRows.concat(bodyRows.slice(0, count))),
+      makeTable(bodyRows.slice(count))
+    ];
+  }
+
+  function splitTextBlock(el, maxH, host) {
+    var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+    var nodes = [];
+    var n;
+    var total = 0;
+    while ((n = walker.nextNode())) {
+      nodes.push(n);
+      total += n.nodeValue.length;
+    }
+    if (total < 40) return null;
+
+    var probe = document.createElement('div');
+    probe.className = 'doc';
+    probe.style.width = PRINT_W + 'px';
+    probe.style.display = 'flow-root';
+    host.appendChild(probe);
+
+    function prefixFragment(k) {
+      var pos = locateChar(nodes, k);
+      var range = document.createRange();
+      range.setStart(el, 0);
+      range.setEnd(pos.node, pos.offset);
+      return range.cloneContents();
+    }
+
+    function heightAt(k) {
+      probe.innerHTML = '';
+      var wrap = el.cloneNode(false);
+      wrap.appendChild(prefixFragment(k));
+      probe.appendChild(wrap);
+      return heightOf(probe);
+    }
+
+    var lo = 1;
+    var hi = total - 1;
+    var best = 0;
+    while (lo <= hi) {
+      var mid = (lo + hi) >> 1;
+      if (heightAt(mid) <= maxH) { best = mid; lo = mid + 1; }
+      else hi = mid - 1;
+    }
+    host.removeChild(probe);
+    if (best <= 0) return null;
+
+    var first = el.cloneNode(false);
+    first.appendChild(prefixFragment(best));
+
+    var pos2 = locateChar(nodes, best);
+    var range2 = document.createRange();
+    range2.setStart(pos2.node, pos2.offset);
+    range2.setEnd(el, el.childNodes.length);
+    var second = el.cloneNode(false);
+    second.appendChild(range2.cloneContents());
+
+    if (!first.textContent.replace(/\s+/g, '') || !second.textContent.replace(/\s+/g, '')) return null;
+    return [first, second];
+  }
+
+  function splitBlock(node, maxH, host) {
+    if (node.nodeType !== 1) return null;
+    var tag = node.tagName;
+    if (tag === 'TABLE') return splitTable(node, maxH, host);
+    if (tag === 'UL' || tag === 'OL' || tag === 'DL') return splitByChildren(node, maxH, host);
+    if (/^(P|H1|H2|H3|H4|H5|H6|BLOCKQUOTE|PRE|DIV)$/.test(tag)) {
+      if (node.querySelector('table,img,ul,ol')) return null;
+      return splitTextBlock(node, maxH, host);
+    }
+    return null;
+  }
+
+  function paginate(html) {
+    var host = makeMeasureHost();
+    var src = document.createElement('div');
+    src.innerHTML = html;
+
+    var bodies = [];
+    var body = newPageBody(host);
+    var guard = 0;
+
+    function closePage(keepWithNext) {
+      var last = body.lastElementChild;
+      if (keepWithNext && last && /^H[1-6]$/.test(last.tagName) && body.children.length > 1) {
+        body.removeChild(last);
+        src.insertBefore(last, src.firstChild);
+      }
+      bodies.push(body);
+      body = newPageBody(host);
+    }
+
+    while (src.firstChild && guard++ < 20000) {
+      var node = src.firstChild;
+
+      if (node.nodeType === 3 && !node.textContent.trim()) {
+        src.removeChild(node);
+        continue;
+      }
+
+      body.appendChild(node);
+      if (heightOf(body) <= PRINT_H) continue;
+
+      body.removeChild(node);
+
+      var remaining = PRINT_H - heightOf(body);
+      if (remaining > 90) {
+        var cut = splitBlock(node, remaining - 24, host);
+        if (cut) {
+          body.appendChild(cut[0]);
+          src.insertBefore(cut[1], src.firstChild);
+          closePage(false);
+          continue;
+        }
+      }
+
+      if (hasVisualContent(body)) {
+        src.insertBefore(node, src.firstChild);
+        closePage(true);
+        continue;
+      }
+
+      var parts = splitBlock(node, PRINT_H, host);
+      if (parts) {
+        body.appendChild(parts[0]);
+        if (parts[1]) src.insertBefore(parts[1], src.firstChild);
+      } else {
+        body.appendChild(node);
+      }
+      bodies.push(body);
+      body = newPageBody(host);
+    }
+
+    if (hasVisualContent(body)) bodies.push(body);
+
+    for (var i = 0; i < bodies.length; i++) {
+      bodies[i].setAttribute('data-height', Math.round(heightOf(bodies[i])));
+    }
+
+    document.body.removeChild(host);
+    return bodies;
+  }
+
+  /* ================== impresion ================== */
+  function collectPages() {
+    if (renderMode === 'docx') {
+      return docxSections().map(function (s) {
+        var w = toPx(s.style.width) || s.offsetWidth || PAGE_W;
+        var h = toPx(s.style.minHeight) || toPx(s.style.height) || s.offsetHeight || PAGE_H;
+        return { kind: 'docx', html: s.outerHTML, w: w, h: h };
+      });
+    }
+
+    if (renderMode === 'legacy') {
+      return paginate(page.innerHTML).map(function (b) {
+        return { kind: 'legacy', html: b.innerHTML, w: PAGE_W, h: PAGE_H };
+      });
+    }
+
+    return [];
+  }
+
+  /* docx-preview escribe las medidas en pt ("595.3pt"); se normaliza a px */
+  function toPx(value) {
+    var m = /^\s*([\d.]+)\s*(px|pt|pc|cm|mm|in)?\s*$/.exec(String(value || ''));
+    if (!m) return 0;
+    var n = parseFloat(m[1]);
+    if (!isFinite(n)) return 0;
+    switch ((m[2] || 'px').toLowerCase()) {
+      case 'pt': return n * 96 / 72;
+      case 'pc': return n * 16;
+      case 'in': return n * 96;
+      case 'cm': return n * 96 / 2.54;
+      case 'mm': return n * 96 / 25.4;
+      default: return n;
+    }
+  }
+
+  function pxToMm(px) { return (px / 96 * 25.4).toFixed(2) + 'mm'; }
+
+  function buildPrint(nup) {
+    var pages = collectPages();
+    printRoot.className = 'print-root';
+    printRoot.innerHTML = '';
+
+    if (!pages.length) {
+      printPageSize.textContent = '';
+      printReady = true;
+      return 0;
+    }
+
+    var p0 = pages[0];
+    var shortSide = Math.min(p0.w, p0.h);
+    var longSide = Math.max(p0.w, p0.h);
+
+    var paperW, paperH, cols, rows, gap, pad;
+    if (nup === 1) {
+      paperW = p0.w; paperH = p0.h; cols = 1; rows = 1; gap = 0; pad = 0;
+    } else if (nup === 2) {
+      paperW = longSide; paperH = shortSide; cols = 2; rows = 1; gap = 0.3 * 96; pad = 0.25 * 96;
+    } else {
+      paperW = shortSide; paperH = longSide; cols = 2; rows = 2; gap = 0.2 * 96; pad = 0.25 * 96;
+    }
+
+    var availW = paperW - pad * 2 - gap * (cols - 1);
+    var availH = paperH - pad * 2 - gap * (rows - 1);
+    var slotW = availW / cols;
+    var slotH = availH / rows;
+    var scale = Math.min(slotW / p0.w, slotH / p0.h);
+    if (nup === 1) scale = 1;
+
+    printPageSize.textContent = '@page { size: ' + pxToMm(paperW) + ' ' + pxToMm(paperH) + '; margin: 0; }';
+
+    var numbering = numPagesBox.checked;
+
+    for (var i = 0; i < pages.length; i += nup) {
+      var printPage = document.createElement('div');
+      printPage.className = 'print-page';
+      printPage.style.width = paperW + 'px';
+      printPage.style.height = paperH + 'px';
+      printPage.style.padding = pad ? pad + 'px' : '0';
+      printPage.style.display = 'flex';
+      printPage.style.alignItems = 'center';
+      printPage.style.justifyContent = 'center';
+      printPage.style.gap = gap ? gap + 'px' : '0';
+      if (nup === 4) printPage.style.flexWrap = 'wrap';
+
+      for (var j = i; j < Math.min(i + nup, pages.length); j++) {
+        var pg = pages[j];
+
+        var slot = document.createElement('div');
+        slot.className = 'slot';
+        slot.style.width = (pg.w * scale) + 'px';
+        slot.style.height = (pg.h * scale) + 'px';
+
+        var holder = document.createElement('div');
+        holder.innerHTML = pg.html;
+        var node = holder.firstElementChild;
+        if (!node) continue;
+
+        node.style.position = 'absolute';
+        node.style.top = '0';
+        node.style.left = '0';
+        node.style.margin = '0';
+        node.style.transformOrigin = 'top left';
+        if (scale !== 1) node.style.transform = 'scale(' + scale + ')';
+
+        if (pg.kind === 'docx') {
+          node.style.width = pg.w + 'px';
+          node.style.height = pg.h + 'px';
+          node.style.minHeight = pg.h + 'px';
+          node.style.overflow = 'hidden';
+          node.style.background = '#fff';
+          node.style.boxShadow = 'none';
+        } else {
+          node.classList.add('sheet-legacy');
+          node.style.width = pg.w + 'px';
+          node.style.height = pg.h + 'px';
+          node.style.padding = '25.4mm';
+          node.style.background = '#fff';
+          node.style.boxSizing = 'border-box';
+          node.style.overflow = 'hidden';
+          node.style.zoom = '1';
+        }
+
+        slot.appendChild(node);
+
+        if (numbering) {
+          var foot = document.createElement('div');
+          foot.className = 'print-foot';
+          foot.style.bottom = nup === 1 ? '0.4in' : '3px';
+          foot.textContent = 'Página ' + (j + 1) + ' de ' + pages.length;
+          slot.appendChild(foot);
+        }
+
+        printPage.appendChild(slot);
+      }
+
+      printRoot.appendChild(printPage);
+    }
+
+    printReady = true;
+    return pages.length;
+  }
+
+  function doPrint() {
+    var nup = parseInt(nupSelect.value, 10) || 1;
+    try {
+      localStorage.setItem('dv-nup', String(nup));
+      localStorage.setItem('dv-numpages', numPagesBox.checked ? '1' : '0');
+    } catch (_) {}
+    buildPrint(nup);
+    window.print();
+  }
+
+  /* ================== eventos ================== */
+  document.getElementById('openBtn').addEventListener('click', function () { fileInput.click(); });
+  document.getElementById('openBtn2').addEventListener('click', function () { fileInput.click(); });
+  document.getElementById('noteClose').addEventListener('click', function () { setNote('', ''); });
+  fileInput.addEventListener('change', function () {
+    if (fileInput.files && fileInput.files[0]) openFileObject(fileInput.files[0]);
+    fileInput.value = '';
+  });
+
+  ['dragenter', 'dragover'].forEach(function (ev) {
+    window.addEventListener(ev, function (e) {
+      e.preventDefault();
+      document.body.classList.add('dragover');
+    });
+  });
+  ['dragleave', 'dragend'].forEach(function (ev) {
+    window.addEventListener(ev, function (e) {
+      if (e.target === document.documentElement || !e.relatedTarget) {
+        document.body.classList.remove('dragover');
+      }
+    });
+  });
+  window.addEventListener('drop', function (e) {
+    e.preventDefault();
+    document.body.classList.remove('dragover');
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) openFileObject(f);
+  });
+
+  document.getElementById('zIn').addEventListener('click', function () { setZoom(zoom + 0.1); });
+  document.getElementById('zOut').addEventListener('click', function () { setZoom(zoom - 0.1); });
+  zVal.addEventListener('click', function () { setZoom(1); });
+
+  document.getElementById('themeBtn').addEventListener('click', function () {
+    var dark = document.body.classList.toggle('dark');
+    try { localStorage.setItem('dv-theme', dark ? 'dark' : 'light'); } catch (_) {}
+  });
+
+  document.getElementById('printBtn').addEventListener('click', doPrint);
+
+  document.addEventListener('keydown', function (e) {
+    var mod = e.ctrlKey || e.metaKey;
+    if (mod && e.key.toLowerCase() === 'f') {
+      e.preventDefault();
+      openFind();
+      return;
+    }
+    if (mod && e.key.toLowerCase() === 'o') { e.preventDefault(); fileInput.click(); return; }
+    if (mod && (e.key === '+' || e.key === '=')) { e.preventDefault(); setZoom(zoom + 0.1); return; }
+    if (mod && e.key === '-') { e.preventDefault(); setZoom(zoom - 0.1); return; }
+    if (mod && e.key === '0') { e.preventDefault(); setZoom(1); return; }
+    if (mod && e.key.toLowerCase() === 'p') { e.preventDefault(); doPrint(); return; }
+    if (e.key === 'Escape' && !findBar.hidden) { hideFind(); }
+  });
+
+  window.addEventListener('beforeprint', function () {
+    if (!printReady) {
+      try { buildPrint(parseInt(nupSelect.value, 10) || 1); } catch (err) { console.error(err); }
+    }
+  });
+
+  window.addEventListener('resize', function () {
+    if (!findHits.length) return;
+    var hit = findHits[findIndex];
+    if (hit) hit.scrollIntoView({ block: 'center' });
+  });
+
+  /* ================== latido para cerrar el servidor ================== */
+  function ping() { fetch('/ping', { cache: 'no-store' }).catch(function () {}); }
+  ping();
+  setInterval(ping, 10000);
+  document.addEventListener('visibilitychange', ping);
+  window.addEventListener('focus', ping);
+  window.addEventListener('pagehide', function () { ping(); });
+
+  /* depuracion interna */
+  window.__dvDebug = {
+    mode: function () { return renderMode; },
+    count: function () { return docxSections().length; },
+    overflow: function () { return sectionsOverflow(); },
+    sections: function () {
+      return docxSections().map(function (s) {
+        return {
+          offsetH: s.offsetHeight,
+          pageH: toPx(s.style.minHeight) || toPx(s.style.height),
+          w: s.style.width
+        };
+      });
+    },
+    build: function (n) { return buildPrint(n || 1); },
+    pages: function () {
+      return Array.prototype.map.call(printRoot.querySelectorAll('.print-page .slot'), function (el) {
+        var node = el.firstElementChild;
+        return {
+          h: node ? Math.round(parseFloat(node.style.height) || 0) : 0,
+          text: el.textContent.replace(/\s+/g, ' ').slice(0, 40)
+        };
+      });
+    },
+    find: function (q) { openFind(); findInput.value = q; runFind(q); return findHits.length; }
+  };
+
+  loadFromServer();
+})();
+</script>
+</body>
+</html>
